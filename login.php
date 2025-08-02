@@ -5,31 +5,25 @@ $error = '';
 $success = '';
 
 if ($_POST) {
-    $name = trim($_POST['name']);
     $email = trim($_POST['email']);
     $password = $_POST['password'];
     
-    if (empty($name) || empty($email) || empty($password)) {
+    if (empty($email) || empty($password)) {
         $error = 'Please fill all fields';
-    } elseif (strlen($password) < 6) {
-        $error = 'Password must be at least 6 characters long';
     } else {
-        // Check if email already exists
-        $stmt = $pdo->prepare("SELECT id FROM managers WHERE email = ?");
+        // Check if manager exists
+        $stmt = $pdo->prepare("SELECT * FROM managers WHERE email = ?");
         $stmt->execute([$email]);
+        $manager = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        if ($stmt->fetch()) {
-            $error = 'Email already registered';
+        if ($manager && password_verify($password, $manager['password'])) {
+            $_SESSION['manager_id'] = $manager['id'];
+            $_SESSION['manager_name'] = $manager['name'];
+            $_SESSION['manager_email'] = $manager['email'];
+            header('Location: dashboard.php');
+            exit;
         } else {
-            // Insert new manager
-            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("INSERT INTO managers (name, email, password) VALUES (?, ?, ?)");
-            
-            if ($stmt->execute([$name, $email, $hashedPassword])) {
-                $success = 'Registration successful! You can now login.';
-            } else {
-                $error = 'Registration failed. Please try again.';
-            }
+            $error = 'Invalid email or password';
         }
     }
 }
@@ -39,7 +33,7 @@ if ($_POST) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manager Registration - Player Management System</title>
+    <title>Manager Login - Player Management System</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -54,7 +48,7 @@ if ($_POST) {
 
     <div class="container">
         <div class="form-container">
-            <h2>Create Manager Account</h2>
+            <h2>Login to Dashboard</h2>
             
             <?php if ($error): ?>
                 <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
@@ -64,12 +58,7 @@ if ($_POST) {
                 <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
             <?php endif; ?>
 
-            <form method="POST" id="registerForm">
-                <div class="form-group">
-                    <label for="name">Full Name:</label>
-                    <input type="text" id="name" name="name" required 
-                           value="<?php echo htmlspecialchars($_POST['name'] ?? ''); ?>">
-                </div>
+            <form method="POST" id="loginForm">
                 <div class="form-group">
                     <label for="email">Email:</label>
                     <input type="email" id="email" name="email" required 
@@ -77,19 +66,18 @@ if ($_POST) {
                 </div>
                 <div class="form-group">
                     <label for="password">Password:</label>
-                    <input type="password" id="password" name="password" required minlength="6">
-                    <small>Minimum 6 characters</small>
+                    <input type="password" id="password" name="password" required>
                 </div>
-                <button type="submit" class="btn">Register</button>
+                <button type="submit" class="btn">Login</button>
             </form>
             
             <p style="text-align: center; margin-top: 1rem;">
-                Already have an account? <a href="login.php">Login here</a>
+                Don't have an account? <a href="register.php">Register here</a>
             </p>
         </div>
     </div>
-      <footer>
-    <h6>copyright@2025 made by irabaruta</h6></footer>         
+ <footer>
+    <h6>copyright@2025 made by irabaruta</h6></footer>
     <script src="script.js"></script>
 </body>
 </html>
